@@ -8,6 +8,7 @@ import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.PriorityQueue;
 import java.util.Queue;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
@@ -29,16 +30,11 @@ public class CarPoolingServiceImpl implements CarPoolingService {
     @Override
     public void resetCars(List<Car> cars) {
         waitingGroupsRemove = new ArrayList<>();
-        this.availableCars = new SortedLinkedList();
-        this.waitingGroups = new PriorityQueue<Journey>();
+        this.availableCars = cars.stream()
+            .filter(car -> car.getSeats() >= 4 && car.getSeats() <= 6)
+            .collect(Collectors.toCollection(SortedLinkedList::new));
+        this.waitingGroups = new PriorityQueue<>();
         this.trackGroup = new HashMap<>();
-        for (Car car : cars) {
-            if (car.getSeats() >= 4 && car.getSeats() <= 6) {
-                this.availableCars.add(car);
-            } else {
-                throw new IllegalArgumentException("Invalid seats");
-            }
-        }
     }
 
     @Override

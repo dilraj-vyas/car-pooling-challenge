@@ -1,0 +1,40 @@
+---
+stages:
+  - build
+  - docker
+  - acceptance
+
+build:
+  stage: build
+  image: maven:3.8.6-jdk-11
+  artifacts:
+    paths:
+      - target/
+  script:
+    mvn package
+
+dockerize:
+  stage: docker
+  dependencies:
+    - build
+  image: docker:latest
+  variables:
+    DOCKER_DRIVER: overlay2
+    DOCKER_TLS_CERTDIR: ""
+    DOCKER_HOST: tcp://docker:2375/
+  services:
+    - docker:dind
+  script:
+    - echo ${CI_JOB_TOKEN} | docker login --password-stdin -u ${CI_REGISTRY_USER} ${CI_REGISTRY}
+    - docker build . -t ${CI_REGISTRY_IMAGE}:latest
+    - docker push ${CI_REGISTRY_IMAGE}:latest
+
+acceptance:
+  image: cabify/challenge:latest
+  stage: acceptance
+  dependencies: []
+  services:
+    - name: ${CI_REGISTRY_IMAGE}:latest
+      alias: pooling
+  script:
+    - /harness --address http://pooling:8080 acceptance

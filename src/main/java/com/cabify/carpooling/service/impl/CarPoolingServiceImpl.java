@@ -2,7 +2,6 @@ package com.cabify.carpooling.service.impl;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -46,9 +45,7 @@ public class CarPoolingServiceImpl implements CarPoolingService {
     public void newJourney(Journey journey) {
 
         if (this.trackGroup.get(journey.getId()) == null) {
-            Optional<Car> car = availableCars.stream()
-                .filter(c -> c.getSeats() >= journey.getPeople())
-                .findFirst();
+            Optional<Car> car = availableCars.stream().filter(c -> c.getSeats() >= journey.getPeople()).findFirst();
             if (car.isPresent()) {
                 Car car1 = car.get();
                 car1.setSeats(car1.getSeats() - journey.getPeople());
@@ -108,11 +105,15 @@ public class CarPoolingServiceImpl implements CarPoolingService {
 
     private void checkWaitingGroups() {
         // Iterate through the waiting groups and assign a car if possible
-        Iterator<Journey> iterator = waitingGroups.iterator();
-        while (iterator.hasNext()) {
-            Journey group = iterator.next();
-            newJourney(group);
-        }
-        waitingGroups.removeAll(waitingGroupsRemove);
+        waitingGroups.removeIf(journey -> {
+            if (availableCars.stream().anyMatch(car -> car.getSeats() >= journey.getPeople())) {
+                Car car = availableCars.stream().filter(c -> c.getSeats() >= journey.getPeople()).findFirst().orElseThrow(IllegalStateException::new);
+                car.setSeats(car.getSeats() - journey.getPeople());
+                journey.setAssignedTo(new Car(car.getId(), journey.getPeople()));
+                trackGroup.put(journey.getId(), journey);
+                return true;
+            }
+            return false;
+        });
     }
 }
